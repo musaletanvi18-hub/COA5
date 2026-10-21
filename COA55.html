@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPU Instruction Cycle Simulator</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 25px 15px;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #071426, #142b50, #101827);
+    color: #f1f5f9;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+}
+
+.header {
+    text-align: center;
+    padding: 25px 15px;
+    margin-bottom: 22px;
+}
+
+.header h1 {
+    font-size: 32px;
+    color: white;
+}
+
+.header h1 span {
+    color: #60a5fa;
+}
+
+.header p {
+    color: #b8c7df;
+    line-height: 1.6;
+}
+
+.card {
+    background: rgba(22, 39, 66, 0.96);
+    border: 1px solid #304968;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.18);
+}
+
+h2 {
+    font-size: 20px;
+    color: #e2eaff;
+    margin-top: 0;
+}
+
+.inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+label {
+    display: block;
+    text-align: left;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+input, select {
+    width: 100%;
+    padding: 13px;
+    border-radius: 8px;
+    border: 1px solid #425b7d;
+    background: #0c1b30;
+    color: white;
+    font-size: 16px;
+}
+
+.operation {
+    margin-top: 18px;
+}
+
+.buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+button {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.start {
+    background: #3b82f6;
+    color: white;
+}
+
+.next {
+    background: #15803d;
+    color: white;
+}
+
+.reset {
+    background: #263c59;
+    color: white;
+    border: 1px solid #49617e;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 13px;
+}
+
+.step {
+    background: #0c1b30;
+    border: 1px solid #304968;
+    border-radius: 12px;
+    padding: 20px 12px;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.step .number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #243a59;
+    color: #93c5fd;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.step h3 {
+    margin: 5px 0 10px;
+    font-size: 16px;
+}
+
+.step p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #aebed3;
+    margin-bottom: 0;
+    overflow-wrap: anywhere;
+}
+
+.step.active {
+    border-color: #60a5fa;
+    background: #18365c;
+    box-shadow: 0 0 18px rgba(59,130,246,0.18);
+    transform: translateY(-3px);
+}
+
+.step.done .number {
+    background: #15803d;
+    color: white;
+}
+
+.reason {
+    margin-top: 18px;
+    padding: 16px;
+    background: #0c1b30;
+    border: 1px solid #304968;
+    border-radius: 10px;
+    text-align: left;
+    line-height: 1.7;
+}
+
+.reason strong {
+    color: #93c5fd;
+}
+
+.result-box {
+    text-align: center;
+    background: linear-gradient(135deg, #142e4f, #173b62);
+    border: 1px solid #3c628c;
+    border-radius: 14px;
+    padding: 24px 15px;
+    margin-top: 20px;
+}
+
+.result-box p {
+    color: #bfdbfe;
+    margin: 0 0 12px;
+}
+
+#result {
+    font-size: 32px;
+    color: #86efac;
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+#message {
+    color: #cbd5e1;
+    font-size: 14px;
+    margin-top: 12px;
+}
+
+.footer {
+    text-align: center;
+    padding: 12px;
+    color: #8fa6c5;
+    font-size: 12px;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .header h1 {
+        font-size: 25px;
+    }
+
+    .card {
+        padding: 17px;
+    }
+
+    .steps, .inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .buttons {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header class="header">
+    <h1>CPU <span>Instruction Cycle</span></h1>
+    <p>
+        Virtual Lab · Learn how a CPU fetches, decodes and executes instructions.
+    </p>
+</header>
+
+<section class="card">
+    <h2>Instruction Setup</h2>
+
+    <div class="inputs">
+        <div>
+            <label for="a">First Number</label>
+            <input type="number" id="a" value="10">
+        </div>
+
+        <div>
+            <label for="b">Second Number</label>
+            <input type="number" id="b" value="5">
+        </div>
+    </div>
+
+    <div class="operation">
+        <label for="operation">Select Operation</label>
+
+        <select id="operation">
+            <option value="ADD">ADD (+)</option>
+            <option value="SUB">SUB (-)</option>
+            <option value="MUL">MUL (×)</option>
+            <option value="DIV">DIV (÷)</option>
+        </select>
+    </div>
+
+    <div class="buttons">
+        <button class="start" id="startBtn" onclick="startCycle()">
+            ▶ Start Simulation
+        </button>
+
+        <button class="next" id="nextBtn" onclick="nextStep()" disabled>
+            Next →
+        </button>
+
+        <button class="reset" onclick="resetCycle()">
+            ↻ Reset
+        </button>
+    </div>
+
+    <p id="message" role="status">
+        Ready to start. Enter numbers and select an operation.
+    </p>
+</section>
+
+<section class="card">
+    <h2>Instruction Cycle</h2>
+
+    <div class="steps">
+
+        <div class="step" id="step1">
+            <div class="number">01</div>
+            <h3>FETCH</h3>
+            <p id="fetch">Waiting to fetch instruction.</p>
+        </div>
+
+        <div class="step" id="step2">
+            <div class="number">02</div>
+            <h3>DECODE</h3>
+            <p id="decode">Waiting to decode instruction.</p>
+        </div>
+
+        <div class="step" id="step3">
+            <div class="number">03</div>
+            <h3>EXECUTE</h3>
+            <p id="execute">Waiting to execute instruction.</p>
+        </div>
+
+    </div>
+
+    <div class="reason">
+        <strong>Step Explanation & Reason</strong>
+        <p id="reason">Click Start Simulation to begin.</p>
+    </div>
+
+    <div class="result-box">
+        <p>FINAL RESULT</p>
+        <div id="result">—</div>
+    </div>
+</section>
+
+<div class="footer">
+    CPU Instruction Cycle Simulator · Educational Virtual Lab
+</div>
+
+</div>
+
+<script>
+let currentStep = 0;
+let a = 0;
+let b = 0;
+let op = "";
+let answer = 0;
+
+function clearSteps() {
+    for (let i = 1; i <= 3; i++) {
+        document.getElementById("step" + i)
+            .classList.remove("active", "done");
+    }
+}
+
+function startCycle() {
+    const aInput = document.getElementById("a").value;
+    const bInput = document.getElementById("b").value;
+
+    if (aInput.trim() === "" || bInput.trim() === "") {
+        document.getElementById("message").textContent =
+            "Please enter both numbers.";
+        return;
+    }
+
+    a = Number(aInput);
+    b = Number(bInput);
+    op = document.getElementById("operation").value;
+
+    if (!Number.isFinite(a) || !Number.isFinite(b)) {
+        document.getElementById("message").textContent =
+            "Please enter valid numbers.";
+        return;
+    }
+
+    if (op === "DIV" && b === 0) {
+        document.getElementById("message").textContent =
+            "Error: Division by zero is not allowed.";
+
+        document.getElementById("result").textContent =
+            "Invalid Operation";
+
+        return;
+    }
+
+    currentStep = 1;
+    clearSteps();
+
+    document.getElementById("startBtn").disabled = true;
+    document.getElementById("nextBtn").disabled = false;
+
+    document.getElementById("result").textContent = "Processing...";
+
+    document.getElementById("message").textContent =
+        "Step 1 of 3: FETCH completed. Click Next to continue.";
+
+    // STEP 1: FETCH
+    document.getElementById("step1").classList.add("active");
+
+    document.getElementById("fetch").textContent =
+        "Fetched instruction: " + op + " (" + a + ", " + b + ").";
+
+    document.getElementById("decode").textContent =
+        "Waiting for decode.";
+
+    document.getElementById("execute").textContent =
+        "Waiting for execution.";
+
+    document.getElementById("reason").innerHTML =
+        "<strong>Step 1 — FETCH</strong><br>" +
+        "Instruction: " + op + " (" + a + ", " + b + ").<br>" +
+        "Reason: The CPU fetches the required instruction from memory " +
+        "so it can process the selected operation.";
+}
+
+function nextStep() {
+    if (currentStep === 0 || currentStep >= 3) return;
+
+    // Remove previous highlight and mark it completed
+    document.getElementById("step" + currentStep)
+        .classList.remove("active");
+
+    document.getElementById("step" + currentStep)
+        .classList.add("done");
+
+    currentStep++;
+
+    if (currentStep === 2) {
+        // STEP 2: DECODE
+        document.getElementById("step2").classList.add("active");
+
+        document.getElementById("decode").textContent =
+            "Decoded instruction: " + op +
+            ". Operands are " + a + " and " + b + ".";
+
+        document.getElementById("reason").innerHTML =
+            "<strong>Step 2 — DECODE</strong><br>" +
+            "Instruction: " + op + " (" + a + ", " + b + ").<br>" +
+            "Reason: The CPU identifies the operation and its operands " +
+            "to determine what calculation must be performed.";
+
+        document.getElementById("message").textContent =
+            "Step 2 of 3: DECODE completed. Click Next to execute.";
+    }
+
+    else if (currentStep === 3) {
+        // STEP 3: EXECUTE
+        document.getElementById("step3").classList.add("active");
+
+        if (op === "ADD") {
+            answer = a + b;
+        }
+        else if (op === "SUB") {
+            answer = a - b;
+        }
+        else if (op === "MUL") {
+            answer = a * b;
+        }
+        else if (op === "DIV") {
+            answer = a / b;
+        }
+
+        document.getElementById("execute").textContent =
+            "Executed: " + a + " " + op + " " + b + ".";
+
+        document.getElementById("reason").innerHTML =
+            "<strong>Step 3 — EXECUTE</strong><br>" +
+            "Calculation: " + a + " " + op + " " + b + "<br>" +
+            "Reason: The CPU performs the selected arithmetic operation " +
+            "and produces the result.";
+
+        document.getElementById("result").textContent =
+            Number(answer.toPrecision(10)).toString();
+
+        document.getElementById("message").textContent =
+            "Simulation completed successfully!";
+
+        document.getElementById("nextBtn").disabled = true;
+        document.getElementById("startBtn").disabled = false;
+
+        document.getElementById("step3").classList.remove("active");
+        document.getElementById("step3").classList.add("done");
+    }
+}
+
+function resetCycle() {
+    currentStep = 0;
+    clearSteps();
+
+    document.getElementById("a").value = 10;
+    document.getElementById("b").value = 5;
+    document.getElementById("operation").value = "ADD";
+
+    document.getElementById("fetch").textContent =
+        "Waiting to fetch instruction.";
+
+    document.getElementById("decode").textContent =
+        "Waiting to decode instruction.";
+
+    document.getElementById("execute").textContent =
+        "Waiting to execute instruction.";
+
+    document.getElementById("reason").textContent =
+        "Click Start Simulation to begin.";
+
+    document.getElementById("result").textContent = "—";
+
+    document.getElementById("message").textContent =
+        "Ready to start. Enter numbers and select an operation.";
+
+    document.getElementById("startBtn").disabled = false;
+    document.getElementById("nextBtn").disabled = true;
+}
+</script>
+
+</body>
+</html>
